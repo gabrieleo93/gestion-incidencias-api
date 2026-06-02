@@ -2,6 +2,7 @@ package com.gestionincidencias.api.services;
 
 import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.gestionincidencias.api.dto.UsuarioRequestDTO;
@@ -17,10 +18,12 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioMapper usuarioMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, UsuarioMapper usuarioMapper) {
+    public UsuarioService(UsuarioRepository usuarioRepository, UsuarioMapper usuarioMapper, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.usuarioMapper = usuarioMapper;
+        this.passwordEncoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 
     public List<UsuarioResponseDTO> listarUsuarios() {
@@ -40,7 +43,7 @@ public class UsuarioService {
                 .nombre(usuarioDTO.getNombre())
                 .apellido(usuarioDTO.getApellido())
                 .email(usuarioDTO.getEmail())
-                .password(usuarioDTO.getPassword())
+                .password(passwordEncoder.encode(usuarioDTO.getPassword()))
                 .build();
 
         Usuario nuevoUsuario = usuarioRepository.save(usuario);
