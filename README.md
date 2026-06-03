@@ -2,7 +2,7 @@
 
 API REST desarrollada con **Java 17** y **Spring Boot** para gestionar usuarios e incidencias internas dentro de una organización o equipo de soporte.
 
-El proyecto está orientado a demostrar buenas prácticas de backend para un perfil junior: separación por capas, uso de DTOs, mappers, validaciones, manejo global de errores, persistencia con JPA y documentación con Swagger/OpenAPI.
+El proyecto está orientado a demostrar buenas prácticas de backend para un perfil junior: arquitectura por capas, uso de DTOs, mappers, validaciones, manejo global de errores, persistencia con JPA, documentación con Swagger/OpenAPI, autenticación con JWT y autorización por roles.
 
 ---
 
@@ -12,12 +12,16 @@ El proyecto está orientado a demostrar buenas prácticas de backend para un per
 * Spring Boot 3.5.5
 * Spring Web
 * Spring Data JPA
+* Spring Security
+* JWT
+* BCrypt
 * MySQL
 * Lombok
 * Bean Validation
 * Swagger / OpenAPI
 * Maven
 * Postman
+* Git / GitHub
 
 ---
 
@@ -29,7 +33,17 @@ El proyecto está orientado a demostrar buenas prácticas de backend para un per
 * Listar usuarios.
 * Buscar usuario por ID.
 * Validar email duplicado.
+* Encriptar contraseñas con BCrypt.
 * Ocultar contraseña en las respuestas.
+
+### Autenticación y seguridad
+
+* Login mediante email y contraseña.
+* Generación de token JWT.
+* Protección de endpoints privados mediante Bearer Token.
+* Configuración stateless con Spring Security.
+* Filtro JWT para validar peticiones autenticadas.
+* Autorización por roles: `USER`, `ADMIN` y `TECNICO`.
 
 ### Incidencias
 
@@ -60,6 +74,30 @@ El proyecto incluye un manejador global de excepciones para devolver respuestas 
 
 ---
 
+## Roles y permisos
+
+| Rol       | Permisos principales                                                  |
+| --------- | --------------------------------------------------------------------- |
+| `USER`    | Crear incidencias                                                     |
+| `TECNICO` | Consultar incidencias, cambiar estado y prioridad                     |
+| `ADMIN`   | Gestionar usuarios, consultar incidencias, cambiar estado y prioridad |
+
+### Reglas de acceso implementadas
+
+| Endpoint                  | Acceso                     |
+| ------------------------- | -------------------------- |
+| `POST /api/auth/login`    | Público                    |
+| `POST /api/usuarios`      | Público                    |
+| `GET /api/usuarios`       | Solo `ADMIN`               |
+| `GET /api/usuarios/{id}`  | Solo `ADMIN`               |
+| `POST /api/incidencias`   | `USER`, `TECNICO`, `ADMIN` |
+| `GET /api/incidencias`    | `TECNICO`, `ADMIN`         |
+| `GET /api/incidencias/**` | `TECNICO`, `ADMIN`         |
+| `PUT /api/incidencias/**` | `TECNICO`, `ADMIN`         |
+| Swagger/OpenAPI           | Público                    |
+
+---
+
 ## Estructura del proyecto
 
 ```text
@@ -82,7 +120,7 @@ src/main/java/com/gestionincidencias/api
 
 ### Usuario
 
-Representa a una persona que puede crear incidencias dentro del sistema.
+Representa a una persona registrada en el sistema.
 
 Campos principales:
 
@@ -145,6 +183,12 @@ CRITICA
 
 ## Endpoints principales
 
+### Autenticación
+
+| Método | Endpoint          | Descripción                        |
+| ------ | ----------------- | ---------------------------------- |
+| POST   | `/api/auth/login` | Iniciar sesión y obtener token JWT |
+
 ### Usuarios
 
 | Método | Endpoint             | Descripción           |
@@ -165,6 +209,30 @@ CRITICA
 | GET    | `/api/incidencias/prioridad/{prioridad}`         | Filtrar incidencias por prioridad |
 | PUT    | `/api/incidencias/{id}/estado?estado=EN_PROCESO` | Actualizar estado                 |
 | PUT    | `/api/incidencias/{id}/prioridad?prioridad=ALTA` | Actualizar prioridad              |
+
+---
+
+## Seguridad
+
+El proyecto utiliza **Spring Security** con autenticación basada en **JWT**.
+
+Flujo básico:
+
+1. El usuario se registra mediante `POST /api/usuarios`.
+2. El usuario inicia sesión mediante `POST /api/auth/login`.
+3. El backend valida email y contraseña.
+4. Si las credenciales son correctas, devuelve un token JWT.
+5. El cliente debe enviar el token en las peticiones protegidas usando el header:
+
+```http
+Authorization: Bearer TOKEN
+```
+
+Ejemplo:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzUxMiJ9...
+```
 
 ---
 
@@ -203,10 +271,46 @@ Respuesta esperada:
 
 ---
 
+### Login
+
+```http
+POST /api/auth/login
+```
+
+Body:
+
+```json
+{
+  "email": "gabriel@test.com",
+  "password": "123456"
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzUxMiJ9...",
+  "tipo": "Bearer",
+  "usuarioId": 1,
+  "nombre": "Gabriel",
+  "email": "gabriel@test.com",
+  "rol": "USER"
+}
+```
+
+---
+
 ### Crear incidencia
 
 ```http
 POST /api/incidencias
+```
+
+Header:
+
+```http
+Authorization: Bearer TOKEN
 ```
 
 Body:
@@ -266,16 +370,19 @@ spring.application.name=api
 
 server.port=8082
 
-spring.datasource.url=jdbc:mysql://localhost:3306/gestion_incidencias?useSSL=false&serverTimezone=UTC
+spring.datasource.url=jdbc:mysql://localhost:3306/gestion_incidencias?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 spring.datasource.username=root
 spring.datasource.password=${DB_PASSWORD}
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
+
+jwt.secret=${JWT_SECRET}
+jwt.expiration=86400000
 ```
 
-> Nota: la contraseña de la base de datos se recomienda configurar mediante variable de entorno para evitar subir credenciales reales al repositorio.
+> Nota: se recomienda configurar la contraseña de base de datos y la clave secreta de JWT mediante variables de entorno para evitar subir credenciales reales al repositorio.
 
 ---
 
@@ -313,11 +420,31 @@ http://localhost:8082
 
 ---
 
+## Pruebas realizadas
+
+Se realizaron pruebas manuales con Postman para validar:
+
+* Registro de usuarios.
+* Login y generación de JWT.
+* Acceso a endpoints protegidos con Bearer Token.
+* Bloqueo de endpoints protegidos sin token.
+* Validación de permisos por rol.
+* Creación de incidencias.
+* Consulta de incidencias por rol autorizado.
+* Actualización de estado y prioridad por roles autorizados.
+* Respuestas de error controladas mediante `GlobalExceptionHandler`.
+
+---
+
 ## Estado actual del proyecto
 
 Proyecto backend funcional con:
 
 * CRUD básico de usuarios.
+* Login con JWT.
+* Contraseñas encriptadas con BCrypt.
+* Rutas protegidas mediante Bearer Token.
+* Autorización por roles `USER`, `ADMIN` y `TECNICO`.
 * Gestión de incidencias.
 * Filtros por usuario, estado y prioridad.
 * Validaciones con Bean Validation.
@@ -329,13 +456,12 @@ Proyecto backend funcional con:
 
 ## Próximas mejoras
 
-* Implementar autenticación con JWT.
-* Encriptar contraseñas con BCrypt.
-* Agregar roles `USER`, `ADMIN` y `TECNICO` con permisos diferenciados.
 * Añadir tests unitarios e integración.
 * Crear frontend en Angular para consumir la API.
 * Agregar paginación y ordenación en listados.
 * Mejorar documentación con capturas de Postman y Swagger.
+* Preparar colección de Postman para compartir pruebas.
+* Añadir Docker para facilitar la ejecución del proyecto.
 
 ---
 
