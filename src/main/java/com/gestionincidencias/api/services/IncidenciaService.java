@@ -66,6 +66,28 @@ public class IncidenciaService {
         return incidenciaMapper.toResponseDTO(incidencia);
     }
 
+    // Cambio funcional: obtiene el usuario desde el token y devuelve solo sus incidencias.
+    public List<IncidenciaResponseDTO> listarMisIncidencias(String emailUsuarioAutenticado) {
+        Usuario usuario = obtenerUsuarioPorEmail(emailUsuarioAutenticado);
+
+        return incidenciaRepository.findByUsuarioCreador_Id(usuario.getId())
+                .stream()
+                .map(incidenciaMapper::toResponseDTO)
+                .toList();
+    }
+
+    // Cambio funcional: valida propiedad antes de devolver el detalle a un USER.
+    public IncidenciaResponseDTO buscarMiIncidenciaPorId(Integer id, String emailUsuarioAutenticado) {
+        Usuario usuario = obtenerUsuarioPorEmail(emailUsuarioAutenticado);
+        Incidencia incidencia = obtenerIncidenciaPorId(id);
+
+        if (!incidencia.getUsuarioCreador().getId().equals(usuario.getId())) {
+            throw new NotFoundException("Incidencia no encontrada con ID: " + id);
+        }
+
+        return incidenciaMapper.toResponseDTO(incidencia);
+    }
+
     public List<IncidenciaResponseDTO> listarIncidenciasPorUsuario(Integer usuarioId) {
         return incidenciaRepository.findByUsuarioCreador_Id(usuarioId)
                 .stream()
@@ -88,43 +110,50 @@ public class IncidenciaService {
     }
 
     public IncidenciaResponseDTO actualizarEstado(Integer id, EstadoIncidencia nuevoEstado) {
-    Incidencia incidencia = obtenerIncidenciaPorId(id);
+        Incidencia incidencia = obtenerIncidenciaPorId(id);
 
-    if (incidencia.getEstado() == EstadoIncidencia.CERRADA) {
-        throw new BadRequestException(
-                "No se puede modificar una incidencia cerrada"
-        );
+        if (incidencia.getEstado() == EstadoIncidencia.CERRADA) {
+            throw new BadRequestException(
+                    "No se puede modificar una incidencia cerrada"
+            );
+        }
+
+        incidencia.setEstado(nuevoEstado);
+        incidencia.setFechaActualizacion(LocalDateTime.now());
+
+        if (nuevoEstado == EstadoIncidencia.CERRADA || nuevoEstado == EstadoIncidencia.RESUELTA) {
+            incidencia.setFechaCierre(LocalDateTime.now());
+        }
+
+        Incidencia incidenciaActualizada = incidenciaRepository.save(incidencia);
+
+        return incidenciaMapper.toResponseDTO(incidenciaActualizada);
     }
-
-    incidencia.setEstado(nuevoEstado);
-    incidencia.setFechaActualizacion(LocalDateTime.now());
-
-    if (nuevoEstado == EstadoIncidencia.CERRADA || nuevoEstado == EstadoIncidencia.RESUELTA) {
-        incidencia.setFechaCierre(LocalDateTime.now());
-    }
-
-    Incidencia incidenciaActualizada = incidenciaRepository.save(incidencia);
-
-    return incidenciaMapper.toResponseDTO(incidenciaActualizada);
-}
 
     public IncidenciaResponseDTO actualizarPrioridad(Integer id, PrioridadIncidencia nuevaPrioridad) {
-    Incidencia incidencia = obtenerIncidenciaPorId(id);
+        Incidencia incidencia = obtenerIncidenciaPorId(id);
 
-    if (incidencia.getEstado() == EstadoIncidencia.RESUELTA ||
-            incidencia.getEstado() == EstadoIncidencia.CERRADA) {
-        throw new BadRequestException(
-                "No se puede cambiar la prioridad de una incidencia resuelta o cerrada"
-        );
+        if (incidencia.getEstado() == EstadoIncidencia.RESUELTA ||
+                incidencia.getEstado() == EstadoIncidencia.CERRADA) {
+            throw new BadRequestException(
+                    "No se puede cambiar la prioridad de una incidencia resuelta o cerrada"
+            );
+        }
+
+        incidencia.setPrioridad(nuevaPrioridad);
+        incidencia.setFechaActualizacion(LocalDateTime.now());
+
+        Incidencia incidenciaActualizada = incidenciaRepository.save(incidencia);
+
+        return incidenciaMapper.toResponseDTO(incidenciaActualizada);
     }
 
-    incidencia.setPrioridad(nuevaPrioridad);
-    incidencia.setFechaActualizacion(LocalDateTime.now());
-
-    Incidencia incidenciaActualizada = incidenciaRepository.save(incidencia);
-
-    return incidenciaMapper.toResponseDTO(incidenciaActualizada);
-}
+    private Usuario obtenerUsuarioPorEmail(String email) {
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException(
+                        "Usuario no encontrado con email: " + email
+                ));
+    }
 
     private Incidencia obtenerIncidenciaPorId(Integer id) {
         return incidenciaRepository.findById(id)

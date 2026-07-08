@@ -2,6 +2,7 @@ package com.gestionincidencias.api.controllers;
 
 import java.util.List;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.gestionincidencias.api.dto.IncidenciaRequestDTO;
@@ -30,6 +31,21 @@ public class IncidenciaController {
     @GetMapping
     public List<IncidenciaResponseDTO> listarIncidencias() {
         return incidenciaService.listarIncidencias();
+    }
+
+    // Cambio funcional: permite que un USER vea únicamente sus propias incidencias.
+    @GetMapping("/mis")
+    public List<IncidenciaResponseDTO> listarMisIncidencias(Authentication authentication) {
+        return incidenciaService.listarMisIncidencias(authentication.getName());
+    }
+
+    // Cambio funcional: permite que un USER abra el detalle solo de una incidencia propia.
+    @GetMapping("/mis/{id}")
+    public IncidenciaResponseDTO buscarMiIncidenciaPorId(
+            @PathVariable Integer id,
+            Authentication authentication
+    ) {
+        return incidenciaService.buscarMiIncidenciaPorId(id, authentication.getName());
     }
 
     @GetMapping("/{id}")

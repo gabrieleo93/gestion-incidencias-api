@@ -39,50 +39,56 @@ public class SecurityConfig {
     }
 
     @Bean
-   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    return http
-            .csrf(csrf -> csrf.disable())
-            .cors(Customizer.withDefaults())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
 
-                    // Rutas públicas
-                    .requestMatchers(
-                            "/api/auth/**",
-                            "/swagger-ui/**",
-                            "/swagger-ui.html",
-                            "/v3/api-docs/**"
-                    ).permitAll()
+                        // Rutas públicas
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
 
-                    // Registro público de usuarios
-                    .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+                        // Registro público de usuarios
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
 
-                    // Gestión de usuarios solo ADMIN
-                    .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.GET, "/api/usuarios/**").hasRole("ADMIN")
+                        // Gestión de usuarios solo ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/usuarios/**").hasRole("ADMIN")
 
-                    // Crear incidencias: cualquier usuario autenticado con rol válido
-                    .requestMatchers(HttpMethod.POST, "/api/incidencias")
-                    .hasAnyRole("USER", "ADMIN", "TECNICO")
+                        // Crear incidencias: cualquier usuario autenticado con rol válido
+                        .requestMatchers(HttpMethod.POST, "/api/incidencias")
+                        .hasAnyRole("USER", "ADMIN", "TECNICO")
 
-                    // Consultar incidencias: ADMIN o TECNICO
-                    .requestMatchers(HttpMethod.GET, "/api/incidencias/**")
-                    .hasAnyRole("ADMIN", "TECNICO")
+                        // Cambio funcional: USER puede consultar solo sus propias incidencias.
+                        .requestMatchers(HttpMethod.GET, "/api/incidencias/mis")
+                        .hasAnyRole("USER", "ADMIN", "TECNICO")
+                        .requestMatchers(HttpMethod.GET, "/api/incidencias/mis/**")
+                        .hasAnyRole("USER", "ADMIN", "TECNICO")
 
-                    .requestMatchers(HttpMethod.GET, "/api/incidencias")
-                    .hasAnyRole("ADMIN", "TECNICO")
+                        // Consultar incidencias generales: ADMIN o TECNICO
+                        .requestMatchers(HttpMethod.GET, "/api/incidencias/**")
+                        .hasAnyRole("ADMIN", "TECNICO")
 
-                    // Modificar incidencias: ADMIN o TECNICO
-                    .requestMatchers(HttpMethod.PUT, "/api/incidencias/**")
-                    .hasAnyRole("ADMIN", "TECNICO")
+                        .requestMatchers(HttpMethod.GET, "/api/incidencias")
+                        .hasAnyRole("ADMIN", "TECNICO")
 
-                    // Cualquier otra petición necesita autenticación
-                    .anyRequest().authenticated()
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-            .build();
-}
+                        // Modificar incidencias: ADMIN o TECNICO
+                        .requestMatchers(HttpMethod.PUT, "/api/incidencias/**")
+                        .hasAnyRole("ADMIN", "TECNICO")
+
+                        // Cualquier otra petición necesita autenticación
+                        .anyRequest().authenticated()
+                )
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
+    }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
@@ -102,18 +108,19 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
-public CorsConfigurationSource corsConfigurationSource() {
-    CorsConfiguration configuration = new CorsConfiguration();
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
 
-    configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-    configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-    configuration.setAllowCredentials(true);
+        configuration.setAllowedOrigins(List.of("http://localhost:4200"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
 
-    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/**", configuration);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
 
-    return source;
-}
+        return source;
+    }
 }

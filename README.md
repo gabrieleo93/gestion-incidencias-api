@@ -78,7 +78,7 @@ El proyecto incluye un manejador global de excepciones para devolver respuestas 
 
 | Rol       | Permisos principales                                                  |
 | --------- | --------------------------------------------------------------------- |
-| `USER`    | Crear incidencias                                                     |
+| `USER`    | Crear incidencias y consultar únicamente sus propias incidencias       |
 | `TECNICO` | Consultar incidencias, cambiar estado y prioridad                     |
 | `ADMIN`   | Gestionar usuarios, consultar incidencias, cambiar estado y prioridad |
 
@@ -92,6 +92,8 @@ El proyecto incluye un manejador global de excepciones para devolver respuestas 
 | `GET /api/usuarios/{id}`  | Solo `ADMIN`               |
 | `POST /api/incidencias`   | `USER`, `TECNICO`, `ADMIN` |
 | `GET /api/incidencias`    | `TECNICO`, `ADMIN`         |
+| `GET /api/incidencias/mis` | `USER`, `TECNICO`, `ADMIN` |
+| `GET /api/incidencias/mis/{id}` | `USER`, `TECNICO`, `ADMIN` |
 | `GET /api/incidencias/**` | `TECNICO`, `ADMIN`         |
 | `PUT /api/incidencias/**` | `TECNICO`, `ADMIN`         |
 | Swagger/OpenAPI           | Público                    |
@@ -202,8 +204,10 @@ CRITICA
 | Método | Endpoint                                         | Descripción                       |
 | ------ | ------------------------------------------------ | --------------------------------- |
 | POST   | `/api/incidencias`                               | Crear una incidencia              |
-| GET    | `/api/incidencias`                               | Listar incidencias                |
-| GET    | `/api/incidencias/{id}`                          | Buscar incidencia por ID          |
+| GET    | `/api/incidencias`                               | Listar incidencias para ADMIN/TECNICO |
+| GET    | `/api/incidencias/mis`                           | Listar incidencias del usuario autenticado |
+| GET    | `/api/incidencias/mis/{id}`                      | Buscar una incidencia propia por ID |
+| GET    | `/api/incidencias/{id}`                          | Buscar incidencia por ID para ADMIN/TECNICO |
 | GET    | `/api/incidencias/usuario/{usuarioId}`           | Filtrar incidencias por usuario   |
 | GET    | `/api/incidencias/estado/{estado}`               | Filtrar incidencias por estado    |
 | GET    | `/api/incidencias/prioridad/{prioridad}`         | Filtrar incidencias por prioridad |
@@ -431,6 +435,7 @@ Se realizaron pruebas manuales con Postman para validar:
 * Validación de permisos por rol.
 * Creación de incidencias.
 * Consulta de incidencias por rol autorizado.
+* Consulta de incidencias propias para usuarios con rol `USER` mediante token JWT.
 * Actualización de estado y prioridad por roles autorizados.
 * Respuestas de error controladas mediante `GlobalExceptionHandler`.
 
@@ -446,6 +451,7 @@ Proyecto backend funcional con:
 * Rutas protegidas mediante Bearer Token.
 * Autorización por roles `USER`, `ADMIN` y `TECNICO`.
 * Gestión de incidencias.
+* Consulta segura de incidencias propias con `/api/incidencias/mis`.
 * Filtros por usuario, estado y prioridad.
 * Validaciones con Bean Validation.
 * Manejo global de errores.
@@ -457,11 +463,22 @@ Proyecto backend funcional con:
 ## Próximas mejoras
 
 * Añadir tests unitarios e integración.
-* Crear frontend en Angular para consumir la API.
+* Mantener sincronizada la documentación con el frontend Angular.
 * Agregar paginación y ordenación en listados.
 * Mejorar documentación con capturas de Postman y Swagger.
 * Preparar colección de Postman para compartir pruebas.
 * Añadir Docker para facilitar la ejecución del proyecto.
+
+---
+
+## Cambios recientes
+
+### 2026-07-08
+
+* Se añadió `GET /api/incidencias/mis` para que un usuario con rol `USER` pueda consultar únicamente sus propias incidencias.
+* Se añadió `GET /api/incidencias/mis/{id}` para que un `USER` pueda abrir el detalle solo de una incidencia propia.
+* Se actualizaron las reglas de Spring Security para permitir esos endpoints a usuarios autenticados y mantener el listado general restringido a `ADMIN` y `TECNICO`.
+* Se validó el backend con `mvnw.cmd clean test`.
 
 ---
 
