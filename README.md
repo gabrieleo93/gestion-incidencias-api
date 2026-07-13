@@ -1,6 +1,6 @@
 # Gestión de Incidencias API
 
-API REST desarrollada con **Java 17** y **Spring Boot** para gestionar usuarios e incidencias internas dentro de una organización o equipo de soporte.
+API REST desarrollada con **Java 21** y **Spring Boot** para gestionar usuarios e incidencias internas dentro de una organización o equipo de soporte.
 
 El proyecto está orientado a demostrar buenas prácticas de backend para un perfil junior: arquitectura por capas, uso de DTOs, mappers, validaciones, manejo global de errores, persistencia con JPA, documentación con Swagger/OpenAPI, autenticación con JWT y autorización por roles.
 
@@ -8,7 +8,7 @@ El proyecto está orientado a demostrar buenas prácticas de backend para un per
 
 ## Tecnologías utilizadas
 
-* Java 17
+* Java 21
 * Spring Boot 3.5.5
 * Spring Web
 * Spring Data JPA

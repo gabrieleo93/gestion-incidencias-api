@@ -19,7 +19,7 @@
     <description>API REST para gestión de usuarios e incidencias internas</description>
 
     <properties>
-
+        <java.version>21</java.version>
     </properties>
 
     <dependencies>
@@ -115,6 +115,14 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
 
             <plugin>
                 <groupId>org.springframework.boot</groupId>
